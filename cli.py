@@ -8,11 +8,74 @@ class DataBase:
         self.version = "beta 0.10.5"
         self.output = ""
         self.CommandHelp = {
-            "shutdown": "bla bla bla",
-            "cd": "bla bla bla",
-            "dir": "bla bla bla",
-            "ls": "bla bla bla",
-            "quit": "bla bla bla",
+            "shutdown": """command : shutdown
+shutdown system
+usage:
+    shutdown -n         : for shutdown system now
+    shutdown -t [time]  : for shutdown system with time delay, time in second
+    """,
+            "cd": """command : cd
+if without argument print path, else go to argument path
+usage:
+    cd        : print path
+    cd..      : go to parent path  
+    cd/       : go to tree of drive
+    dc [path] : go to path relative or complet
+    """,
+            "dir": """command : dir
+command to print file and folder in path  with style
+usage:
+    dir [path]: print file and directory in path selected or this path if without argument
+    """,
+            "ls": """command : ls
+command to print file and folder in path
+usage:
+    ls [path]: print file and directory in path selected or this path if without argument
+    """,
+            "quit": """command : quit
+command to exit system
+usage:
+    shutdown
+    """,
+            "help": """command : help
+print cli help command
+usage:
+    shutdown
+    """,
+            "$": """command : $
+save preloaded data in var
+usage:
+    $[d]|[t]|[p]|[v]|[username]|[hostname]|[ip]|[mac]
+    
+    d         : date
+    t         : time
+    p         : path
+    v         : version of OS
+    username  : name of user loged
+    hostname  : name of PC
+    ip        : IP address
+    mac       : MAC address
+    """,
+            "!": """command : !
+save text in variable
+usage:
+    ![text] = [varname]
+    """,
+            "?": """command : ?
+print data in variable
+usage:
+    ? [$var]|[!text]
+    """,
+            "clear": """command : clear
+reset screen
+usage:      
+    clear
+    """,
+            "cls": """command : cls
+reset screen
+usage:   
+    cls     
+    """
         }
 
         self.filetype = {
@@ -46,6 +109,20 @@ class DataBase:
 
     tmp = {}
 
+    help = {
+            "shutdown": "shutdown system",
+            "cd": "if without argument print path, else go to argument path",
+            "dir": "command to print file and folder in path  with style",
+            "ls": "command to print file and folder in path",
+            "quit": "command to exit system",
+            "help": "print cli help command",
+            "$": "save preloaded data in var",
+            "!": "save text in variable",
+            "?": "print data in variable",
+            "clear": "reset screen",
+            "cls": "reset screen"
+        }
+
     shutdownCommand = ["shutdown", "stop"]
 
     system = platform.system()
@@ -78,6 +155,9 @@ class DataBase:
             f"\033[1m\033[36m┌─[\033[34mCLI {self.version}\033[36m]─[\033[31m{cd}\033[36m]\n"
             f"\033[1m\033[36m└───(\033[32m{os.getlogin()}\033[34m\033[31m@\033[31m{socket.gethostname()}\033[36m){endcommand}\033[0m "
         )
+
+    def cliversion(self):
+        return self.version
     
     # set the data to print after
     def setOutput(self, output):
@@ -117,6 +197,26 @@ class DataBase:
         typefile = ext.upper() + " file"
         typefile = typefile.replace(".", "")
         return typefile
+
+    def banner(self, *args, top="_", side="|"):
+        combined_texts = [arg for arg in args]
+    
+        # Determine the maximum length of the banner
+        max_length = max(len(line) for line in combined_texts) + 4  # Adding padding
+        
+        # Create the border
+        bordertop = " " + top * (max_length) + "\n"
+        borderbottom = side + top * (max_length) + side + "\n"
+        
+        # Print the banner
+        self.addOutput(bordertop)
+        self.addOutput(side + "{:^{width}}".format(" ", width=max_length) + side + "\n")
+        for line in combined_texts:
+            formatted_line = side + "{:^{width}}".format(line, width=max_length) + side + "\n"
+            self.addOutput(formatted_line)
+        self.addOutput(borderbottom)
+
+
     
 database = DataBase()
 
@@ -258,6 +358,13 @@ class Commands:
     # add command in class
     # add command general (not add in under class)
 
+    def Help():
+        database.banner(f"CLI {database.cliversion()} command help", f"system adapted to {database.data["$v"]}")
+        database.addOutput("{:<10}{:<60}\n".format("command", "info to this command"))
+        database.addOutput("-"*30 + "\n")
+        for command in database.help:
+            database.addOutput("{:<10}{:<60}\n".format(command, database.help[command]))
+
     class System:
         def shutdown(command:str):
             command = command.split()
@@ -271,8 +378,6 @@ class Commands:
                 timesleep = int(command[2])
                 os.system(f"shutdown /s /t {timesleep}")
                 # method to shutdown system in end of timesleep second
-            elif command[1] == "/?":
-                database.addOutput(database.commandhelp("shutdown"))
         
         # add command system
 
@@ -294,8 +399,13 @@ def main():
 
         if command == "close":
             quit()
+
+        if command.endswith("/?"):
+            database.addOutput(database.commandhelp(command.replace(" /?", "")))
+        elif command == "help":
+            Commands.Help()
         
-        if command.startswith("$"):
+        elif command.startswith("$"):
             Commands.Var.create(command, "$")
         elif command.startswith("!"):
             command = command.replace("!", "", 1)
@@ -333,8 +443,10 @@ def main():
                 path = ' '.join(command[1:])
             Commands.Dirs.ls(path)
 
-        # add traitment of command 
+        elif command == "clear" or command == "cls":
+            os.system(database.clear)
 
+        # add traitment of command
 
         else:
             database.setOutput("unckown command")
