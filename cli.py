@@ -163,7 +163,8 @@ usage:
     def setOutput(self, output):
         self.output = output
 
-    def addOutput(self, output):
+    def addOutput(self, *output):
+        output = ' '.join(map(str, output))
         self.output += output
 
     # print data saved
@@ -301,9 +302,9 @@ class Commands:
             _, path = path.split(" ", 1)
             path = path.strip()
             try:
-                files =  os.listdir()
                 if path.startswith("/") and os.path.exists(path.replace("/", "", 1)):
                     path = path.replace("/", "", 1)
+
                 os.chdir(path)
             except FileNotFoundError:
                 database.addOutput(f"Le répertoire '{path}' n'existe pas.")
@@ -345,6 +346,11 @@ class Commands:
                     typefile = "unckown"
                     filename = f"{file}"
                 database.addOutput(" {:<60}{:<7}\n".format(filename, typefile))
+
+        def printdrive():
+            database.addOutput(f"system count {len(database.disc)} drive connected\n")
+            for drive in database.disc:
+                database.addOutput(" -", drive, "\n")
 
         def ls(cd):
             output = ""
@@ -397,11 +403,19 @@ def main():
 
         command = Commands.Var.replace(command)
 
+
         if command == "close":
             quit()
 
-        if command.endswith("/?"):
-            database.addOutput(database.commandhelp(command.replace(" /?", "")))
+        elif command.endswith("/?"):
+            for com in database.CommandHelp:
+                if command.startswith(com):
+                    database.addOutput(database.commandhelp(command.replace(" /?", "")))
+                    in_system = True
+                    break
+            if not in_system:
+                database.addOutput(f"command {command} isn't in database, please verify with command help")
+
         elif command == "help":
             Commands.Help()
         
@@ -442,6 +456,8 @@ def main():
             if len(command) > 1:
                 path = ' '.join(command[1:])
             Commands.Dirs.ls(path)
+        elif command == "disc" or command == "drive":
+            Commands.Dirs.printdrive()
 
         elif command == "clear" or command == "cls":
             os.system(database.clear)
@@ -449,10 +465,11 @@ def main():
         # add traitment of command
 
         else:
-            database.setOutput("unckown command")
+            database.addOutput(f"command {command} isn't in database, please verify with command help")
 
         database.printOutput()
-
-main()
-
-# add try and except for the manage error
+try:
+    main()
+except Exception as e:
+    database.addOutput(e)
+    database.printOutput()
