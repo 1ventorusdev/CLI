@@ -2,6 +2,7 @@ import os
 import datetime
 import socket
 import platform
+import shutil
 
 class DataBase:
     def __init__(self):
@@ -355,9 +356,56 @@ class Commands:
         def ls(cd):
             output = ""
             files = os.listdir(cd)
-            for file in files:
-                output += f"{file}  "
+            
+            # Récupère la taille de l'écran (nombre de colonnes)
+            columns = shutil.get_terminal_size().columns
 
+            # Trouve la longueur maximale des noms de fichiers pour définir la largeur de la colonne
+            max_len = max((len(file) + 10) for file in files)
+            
+            # Ajoute un espace entre les colonnes
+            col_width = max_len
+            
+            # Calcule le nombre de colonnes qui peuvent tenir dans la largeur de l'écran
+            num_cols = columns // col_width
+            
+            # Initialise la variable pour stocker les lignes
+            lines = []
+            
+            # Boucle pour organiser les fichiers en lignes et colonnes
+            line = ""
+            for i, file in enumerate(files):
+                if cd:
+                    path = os.path.join(cd, file)
+                if file in database.disc:
+                    typefile = "[drive]"
+                    filename = f"\033[32m{file}\033[0m"
+                elif os.path.isdir(path):
+                    typefile = "<directory>"
+                    filename = f"\033[34m{file}\033[0m"
+                elif os.path.isfile(path):
+                    typefile = database.whatfiletype(file)
+                    filename = f"\033[36m{file}\033[0m"
+                else:
+                    typefile = "unknown"
+                    filename = f"\033[36m{file}\033[0m"
+                
+                # Ajoute le nom de fichier à la ligne en cours
+                line += f"{filename.ljust(col_width)}"
+                
+                # Si la ligne est complète, ajoute-la à la liste des lignes et réinitialise la ligne
+                if (i + 1) % num_cols == 0:
+                    lines.append(line)
+                    line = ""
+            
+            # Ajoute la dernière ligne si elle n'est pas vide
+            if line:
+                lines.append(line)
+            
+            # Joindre toutes les lignes avec des nouvelles lignes
+            output = "\n".join(lines)
+            
+            # Ajoute la sortie au database
             database.addOutput(output)
 
     # add other class for catergory of command
@@ -435,7 +483,7 @@ def main():
             elif command == "cd/":
                 Commands.Dirs.cdroot()
             else:
-                if command.endswith("~") or command.endswith(database.data["$username"]):
+                if command.endswith(" ~") or command.endswith(" " + database.data["$username"]):
                     Commands.Dirs.cdUserfile()
                 else:
                     Commands.Dirs.cdtopath(command)
