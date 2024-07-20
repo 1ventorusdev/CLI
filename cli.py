@@ -3,6 +3,9 @@ import datetime
 import socket
 import platform
 import shutil
+import ctypes
+import getpass
+import subprocess
 
 class DataBase:
     def __init__(self):
@@ -109,6 +112,11 @@ usage:
         }
 
     tmp = {}
+
+    auth = "user"
+    execute = True
+
+    AdminCommands = ["cd "]
 
     help = {
             "shutdown": "shutdown system",
@@ -218,8 +226,6 @@ usage:
             self.addOutput(formatted_line)
         self.addOutput(borderbottom)
 
-
-    
 database = DataBase()
 
 class Commands:
@@ -444,16 +450,44 @@ class Commands:
         # command alternative of admin command
         pass
 
+class Security:
+    def changeAuth():
+        if database.system == "Windows":
+            if ctypes.windll.shell32.IsUserAnAdmin():
+                database.auth = "admin"
+            else:
+                database.execute = False
+
+        elif database.system == "Linux":
+            password = getpass.getpass("enter your password: ") 
+            command = f"echo {password} | sudo -S -v"
+            proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            # Send the password
+            output, error = proc.communicate(input=f"{password}\n".encode())
+
+            if proc.returncode == 0:
+                database.auth = "admin"
+            else:
+                database.execute = False
+
 def main():
     while True:
         command = input(database.entry())
         database.setOutput("")
+        database.execute = True
 
         command = Commands.Var.replace(command)
+
+        if command.startswith("sudo "):
+            Security.changeAuth()
+            command = command.replace("sudo ", "", 1)
 
 
         if command == "close":
             quit()
+
+        if database.execute == False or (not command.startswith("sudo ") and database.auth != "admin" and command.startswith(adminCommand) for adminCommand in database.AdminCommands):
+            database.addOutput(f"security system:{command} => premission denied")
 
         elif command.endswith("/?"):
             for com in database.CommandHelp:
